@@ -1,0 +1,40 @@
+services:
+  kestra:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kestra-python:latest
+    container_name: kestra
+    user: "root"
+    command: server standalone
+    ports:
+      - "8080:8080"
+    environment:
+      KESTRA_CONFIGURATION: |
+        kestra:
+          repository:
+            type: memory
+          queue:
+            type: memory
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          server:
+            basic-auth:
+              username: admin@kestra.io
+              password: Admin1234
+          tasks:
+            tmpDir:
+              path: /tmp/kestra
+    volumes:
+      - kestra-data:/app/storage
+      - ./scripts:/scripts
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - kestra-tmp:/tmp/kestra
+      - C:/Users/sanch/AppData/Roaming/gcloud:/root/.config/gcloud
+
+volumes:
+  kestra-data:
+  kestra-tmp:

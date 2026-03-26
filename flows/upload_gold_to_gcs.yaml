@@ -1,0 +1,21 @@
+id: upload_gold_to_gcs
+namespace: zoomcamp
+
+tasks:
+  - id: upload_file
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import subprocess
+
+      source = "/data/gold/daily_trip_metrics_2021-01.parquet"
+      target = "gs://terraform-demo-bucket-ricardo-001/gold/daily_trip_metrics_2021-01.parquet"
+
+      print(f"Enviando {source} para {target}")
+
+      subprocess.run(
+          ["gcloud", "storage", "cp", source, target],
+          check=True
+      )
+
+      print("Upload concluído com sucesso.")

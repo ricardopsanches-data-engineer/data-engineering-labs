@@ -1,0 +1,8 @@
+id: test_python
+namespace: zoomcamp
+
+tasks:
+  - id: run_python
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      print("Rodando Python dentro do Kestra 🚀")
