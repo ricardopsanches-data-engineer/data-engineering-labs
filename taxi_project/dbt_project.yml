@@ -1,0 +1,23 @@
+name: 'taxi_project'
+version: '1.0.0'
+profile: 'taxi_project'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  taxi_project:
+
+    staging:
+      +materialized: view
+
+    marts:
+      +materialized: table

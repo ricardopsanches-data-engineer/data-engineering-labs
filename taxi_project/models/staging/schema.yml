@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: stg_daily_trip_metrics
+    description: "Camada de staging com padronização e deduplicação por pickup_date"
+
+    columns:
+      - name: pickup_date
+        description: "Data única das métricas diárias"
+        tests:
+          - not_null
+          - unique
+
+      - name: total_trips
+        description: "Quantidade total de corridas no dia"
+        tests:
+          - not_null
+
+      - name: total_passengers
+        description: "Quantidade total de passageiros no dia"
+        tests:
+          - not_null
+
+      - name: avg_trip_distance
+        description: "Distância média das corridas no dia"
+
+      - name: avg_fare_amount
+        description: "Valor médio das tarifas no dia"
+
+      - name: total_revenue
+        description: "Receita total das corridas no dia"

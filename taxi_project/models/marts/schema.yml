@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: fct_daily_trip_metrics
+    description: "Tabela fato com métricas diárias consolidadas para análise"
+
+    columns:
+      - name: pickup_date
+        description: "Chave única por dia"
+        tests:
+          - not_null
+          - unique
+
+      - name: total_trips
+        description: "Quantidade total de corridas no dia"
+        tests:
+          - not_null
+
+      - name: total_passengers
+        description: "Quantidade total de passageiros no dia"
+        tests:
+          - not_null
+
+  - name: fct_daily_trip_kpis
+    description: "Tabela analítica com KPIs diários derivados das métricas de corridas"
+
+    columns:
+      - name: pickup_date
+        description: "Data de referência dos KPIs"
+        tests:
+          - not_null
+          - unique
+
+      - name: revenue_per_trip
+        description: "Receita média por corrida"
+
+      - name: passengers_per_trip
+        description: "Média de passageiros por corrida"
+
+      - name: revenue_per_passenger
+        description: "Receita média por passageiro"
