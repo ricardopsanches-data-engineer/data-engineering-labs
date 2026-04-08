@@ -1,0 +1,31 @@
+id: nyc_taxi_pipeline_3months
+namespace: zoomcamp.pipeline
+
+inputs:
+  - id: start_year
+    type: STRING
+    defaults: "2021"
+  - id: start_month
+    type: STRING
+    defaults: "01"
+  - id: months_to_process
+    type: STRING
+    defaults: "3"
+
+tasks:
+  - id: run_pipeline
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import subprocess
+
+      subprocess.run(
+          [
+              "python",
+              "/scripts/nyc_taxi_pipeline_3months.py",
+              "--start-year", "{{ inputs.start_year }}",
+              "--start-month", "{{ inputs.start_month }}",
+              "--months-to-process", "{{ inputs.months_to_process }}"
+          ],
+          check=True
+      )

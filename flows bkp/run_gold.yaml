@@ -1,5 +1,5 @@
-id: gold_pipeline
-namespace: zoomcamp
+id: run_gold
+namespace: zoomcamp.pipeline
 
 tasks:
   - id: run_gold_script
@@ -15,6 +15,7 @@ tasks:
 
       output_path = output_dir / "daily_trip_metrics_2021-01.parquet"
 
+      print(f"Lendo arquivo silver: {input_path}")
       df = pd.read_parquet(input_path)
 
       df["tpep_pickup_datetime"] = pd.to_datetime(df["tpep_pickup_datetime"])
@@ -32,21 +33,7 @@ tasks:
           .reset_index()
       )
 
+      print(gold_df.head())
+
       gold_df.to_parquet(output_path, index=False)
-
-  - id: upload_gold_file
-    type: io.kestra.plugin.scripts.python.Script
-    runner: PROCESS
-    script: |
-      import subprocess
-
-      subprocess.run(
-          [
-              "gcloud",
-              "storage",
-              "cp",
-              "/data/gold/daily_trip_metrics_2021-01.parquet",
-              "gs://terraform-demo-bucket-ricardo-001/gold/"
-          ],
-          check=True
-      )
+      print(f"Arquivo gold salvo em: {output_path}")

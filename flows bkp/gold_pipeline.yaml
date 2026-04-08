@@ -1,0 +1,101 @@
+id: gold_pipeline
+namespace: zoomcamp.pipeline
+
+triggers:
+  - id: daily_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "40 10 * * *"
+
+inputs:
+  - id: year
+    type: STRING
+    defaults: "2021"
+  - id: month
+    type: STRING
+    defaults: "01"
+
+tasks:
+  - id: run_gold_script
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      from pathlib import Path
+      import pandas as pd
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+
+      input_file = f"yellow_tripdata_{year}-{month}.parquet"
+      output_file = f"daily_trip_metrics_{year}-{month}.parquet"
+
+      input_path = Path("/data") / input_file
+      output_dir = Path("/data/gold")
+      output_dir.mkdir(parents=True, exist_ok=True)
+      output_path = output_dir / output_file
+
+      print(f"Lendo arquivo silver: {input_path}")
+
+      if not input_path.exists():
+          raise FileNotFoundError(f"Arquivo de entrada não encontrado: {input_path}")
+
+      df = pd.read_parquet(input_path)
+
+      if df.empty:
+          raise ValueError("O dataframe de entrada está vazio.")
+
+      df["tpep_pickup_datetime"] = pd.to_datetime(df["tpep_pickup_datetime"])
+      df["pickup_date"] = df["tpep_pickup_datetime"].dt.date
+
+      gold_df = (
+          df.groupby("pickup_date")
+          .agg(
+              total_trips=("VendorID", "count"),
+              total_passengers=("passenger_count", "sum"),
+              avg_trip_distance=("trip_distance", "mean"),
+              avg_fare_amount=("fare_amount", "mean"),
+              total_revenue=("total_amount", "sum"),
+          )
+          .reset_index()
+      )
+
+      if gold_df.empty:
+          raise ValueError("A camada gold ficou vazia após a agregação.")
+
+      print(gold_df.head())
+      gold_df.to_parquet(output_path, index=False)
+      print(f"Arquivo gold salvo em: {output_path}")
+
+  - id: upload_gold_file
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import subprocess
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+
+      source = f"/data/gold/daily_trip_metrics_{year}-{month}.parquet"
+      target = f"gs://terraform-demo-bucket-ricardo-001/gold/daily_trip_metrics_{year}-{month}.parquet"
+
+      print(f"Enviando {source} para {target}")
+
+      subprocess.run(
+          ["gcloud", "storage", "cp", source, target],
+          check=True
+      )
+
+      print("Validando upload no bucket...")
+
+      result = subprocess.run(
+          ["gcloud", "storage", "ls", target],
+          capture_output=True,
+          text=True
+      )
+
+      print(result.stdout)
+      print(result.stderr)
+
+      if result.returncode != 0 or target not in result.stdout:
+          raise RuntimeError("Arquivo não encontrado no bucket após upload.")
+
+      print("Upload validado com sucesso.")

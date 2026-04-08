@@ -10,10 +10,11 @@ services:
     ports:
       - "8080:8080"
     environment:
+      JAVA_OPTS: "-Xms512m -Xmx2g"
       KESTRA_CONFIGURATION: |
         kestra:
           repository:
-            type: memory
+            type: h2
           queue:
             type: memory
           storage:
@@ -22,6 +23,7 @@ services:
               base-path: "/app/storage"
           server:
             basic-auth:
+              enabled: true
               username: admin@kestra.io
               password: Admin1234
           tasks:
@@ -31,6 +33,7 @@ services:
       - kestra-data:/app/storage
       - ./scripts:/scripts
       - ./data:/data
+      - ./flows:/flows
       - /var/run/docker.sock:/var/run/docker.sock
       - kestra-tmp:/tmp/kestra
       - C:/Users/sanch/AppData/Roaming/gcloud:/root/.config/gcloud

@@ -1,0 +1,54 @@
+id: load_gold_to_bigquery
+namespace: zoomcamp
+
+tasks:
+  - id: load_to_staging
+    type: io.kestra.plugin.gcp.bigquery.LoadFromGcs
+    projectId: terraform-lab-ricardo
+    destinationTable: "ny_taxi.daily_trip_metrics_staging"
+    from:
+      - "gs://terraform-demo-bucket-ricardo-001/gold/daily_trip_metrics_2021-01.parquet"
+    format: PARQUET
+    writeDisposition: WRITE_TRUNCATE
+
+  - id: merge_to_final
+    type: io.kestra.plugin.gcp.bigquery.Query
+    sql: |
+      MERGE `terraform-lab-ricardo.ny_taxi.daily_trip_metrics_auto` T
+      USING `terraform-lab-ricardo.ny_taxi.daily_trip_metrics_staging` S
+      ON T.pickup_date = S.pickup_date
+
+      WHEN MATCHED THEN
+        UPDATE SET
+          total_trips = S.total_trips,
+          total_passengers = S.total_passengers,
+          avg_trip_distance = S.avg_trip_distance,
+          avg_fare_amount = S.avg_fare_amount,
+          total_revenue = S.total_revenue
+
+      WHEN NOT MATCHED THEN
+        INSERT (
+          pickup_date,
+          total_trips,
+          total_passengers,
+          avg_trip_distance,
+          avg_fare_amount,
+          total_revenue
+        )
+        VALUES (
+          S.pickup_date,
+          S.total_trips,
+          S.total_passengers,
+          S.avg_trip_distance,
+          S.avg_fare_amount,
+          S.total_revenue
+        )
+
+  - id: delete_rows_not_in_source
+    type: io.kestra.plugin.gcp.bigquery.Query
+    sql: |
+      DELETE FROM `terraform-lab-ricardo.ny_taxi.daily_trip_metrics_auto`
+      WHERE pickup_date NOT IN (
+        SELECT pickup_date
+        FROM `terraform-lab-ricardo.ny_taxi.daily_trip_metrics_staging`
+      )

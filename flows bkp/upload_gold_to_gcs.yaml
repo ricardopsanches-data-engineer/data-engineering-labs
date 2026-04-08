@@ -1,5 +1,5 @@
 id: upload_gold_to_gcs
-namespace: zoomcamp
+namespace: zoomcamp.pipeline
 
 tasks:
   - id: upload_file

@@ -1,0 +1,97 @@
+id: nyc_taxi_pipeline
+namespace: zoomcamp.pipeline
+
+inputs:
+  - id: year
+    type: STRING
+    defaults: "2021"
+  - id: month
+    type: STRING
+    defaults: "01"
+
+tasks:
+  - id: download_data
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import requests
+      from pathlib import Path
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+
+      url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year}-{month}.parquet"
+      output_path = Path(f"/data/yellow_tripdata_{year}-{month}.parquet")
+
+      with requests.get(url, stream=True) as r:
+          r.raise_for_status()
+          with open(output_path, "wb") as f:
+              for chunk in r.iter_content(chunk_size=8 * 1024 * 1024):
+                  if chunk:
+                      f.write(chunk)
+
+      print("Download OK")
+
+  - id: upload_bronze
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import subprocess
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+
+      source = f"/data/yellow_tripdata_{year}-{month}.parquet"
+      target = f"gs://terraform-demo-bucket-ricardo-001/bronze/trips/yellow_tripdata_{year}-{month}.parquet"
+
+      subprocess.run(["gcloud", "storage", "cp", source, target], check=True)
+      print("Bronze OK")
+
+  - id: transform_gold
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import pandas as pd
+      from pathlib import Path
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+
+      input_path = Path(f"/data/yellow_tripdata_{year}-{month}.parquet")
+      output_path = Path(f"/data/gold_{year}_{month}.parquet")
+
+      cols = ["VendorID", "tpep_pickup_datetime", "total_amount"]
+
+      df = pd.read_parquet(input_path, columns=cols)
+
+      df["tpep_pickup_datetime"] = pd.to_datetime(df["tpep_pickup_datetime"], errors="coerce")
+      df = df.dropna()
+
+      df["pickup_date"] = df["tpep_pickup_datetime"].dt.date
+
+      gold_df = (
+          df.groupby("pickup_date", as_index=False)
+          .agg(
+              total_trips=("VendorID", "count"),
+              total_revenue=("total_amount", "sum")
+          )
+      )
+
+      gold_df.to_parquet(output_path, index=False)
+
+      print("Gold OK")
+
+  - id: upload_gold
+    type: io.kestra.plugin.scripts.python.Script
+    runner: PROCESS
+    script: |
+      import subprocess
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+
+      source = f"/data/gold_{year}_{month}.parquet"
+      target = f"gs://terraform-demo-bucket-ricardo-001/gold/gold_{year}_{month}.parquet"
+
+      subprocess.run(["gcloud", "storage", "cp", source, target], check=True)
+      print("Upload gold OK")

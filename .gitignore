@@ -108,6 +108,8 @@ ENV/
 env.bak/
 venv.bak/
 
+dbt_packages/
+
 .spyderproject
 .spyproject
 .ropeproject
