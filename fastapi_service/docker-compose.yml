@@ -1,0 +1,8 @@
+services:
+  taxi-fastapi:
+    build: .
+    container_name: taxi-fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_BASE_PATH=/app/models/taxi_trips_model
