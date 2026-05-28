@@ -1,0 +1,10 @@
+services:
+
+  feature-service:
+    build: .
+    container_name: feature-service
+    ports:
+      - "8090:8090"
+    environment:
+      - OTEL_SERVICE_NAME=feature-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4317

@@ -1,0 +1,37 @@
+id: ml_pipeline
+namespace: taxi
+
+description: Pipeline MLOps - dbt + modelo latest + previsão futura
+
+tasks:
+  - id: debug_paths
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - pwd
+      - ls /
+      - ls /taxi_project
+      - ls /scripts
+      - ls /models
+
+  - id: dbt_run_features
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - cd /taxi_project && dbt run --select stg_daily_trip_metrics fct_daily_trip_metrics features_daily_trip_metrics
+
+  - id: download_latest_model
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - cd /scripts && python download_latest_model_from_gcs.py
+
+  - id: predict_future
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - cd /scripts && python predict_future.py

@@ -1,0 +1,307 @@
+id: nyc_taxi_full_pipeline
+namespace: zoomcamp.pipeline
+
+inputs:
+  - id: year
+    type: STRING
+    defaults: "2021"
+  - id: month
+    type: STRING
+    defaults: "01"
+
+tasks:
+  - id: bronze_to_gcs
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas pyarrow google-cloud-storage
+    script: |
+      from pathlib import Path
+      import os
+      import urllib.request
+      from google.cloud import storage
+      from google.oauth2.credentials import Credentials
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+      bucket_name = "terraform-demo-bucket-ricardo-001"
+      credentials_path = "/root/.config/gcloud/application_default_credentials.json"
+
+      print("===== DEBUG =====")
+      print("PWD:", os.getcwd())
+      print("HOME:", os.getenv("HOME"))
+      print("Existe /data?", Path("/data").exists())
+      print("Existe credencial?", Path(credentials_path).exists())
+      print("===== FIM DEBUG =====")
+
+      if not Path(credentials_path).exists():
+          raise FileNotFoundError(f"Credencial não encontrada em: {credentials_path}")
+
+      file_name = f"yellow_tripdata_{year}-{month}.parquet"
+      url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{file_name}"
+      local_path = Path(file_name)
+
+      print(f"Baixando: {url}")
+      urllib.request.urlretrieve(url, local_path)
+
+      credentials = Credentials.from_authorized_user_file(
+          credentials_path,
+          scopes=["https://www.googleapis.com/auth/cloud-platform"]
+      )
+
+      client = storage.Client(
+          project="terraform-lab-ricardo",
+          credentials=credentials
+      )
+
+      bucket = client.bucket(bucket_name)
+
+      destination = f"bronze/trips/{file_name}"
+      blob = bucket.blob(destination)
+      blob.upload_from_filename(local_path)
+
+      print(f"Bronze salvo em gs://{bucket_name}/{destination}")
+
+  - id: silver_to_gcs
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas pyarrow google-cloud-storage
+    script: |
+      import pandas as pd
+      from pathlib import Path
+      from google.cloud import storage
+      from google.oauth2.credentials import Credentials
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+      bucket_name = "terraform-demo-bucket-ricardo-001"
+      credentials_path = "/root/.config/gcloud/application_default_credentials.json"
+
+      credentials = Credentials.from_authorized_user_file(
+          credentials_path,
+          scopes=["https://www.googleapis.com/auth/cloud-platform"]
+      )
+
+      client = storage.Client(
+          project="terraform-lab-ricardo",
+          credentials=credentials
+      )
+
+      bucket = client.bucket(bucket_name)
+
+      bronze_file = f"bronze/trips/yellow_tripdata_{year}-{month}.parquet"
+      local_bronze = Path("bronze.parquet")
+      local_silver = Path(f"silver_tripdata_{year}-{month}.parquet")
+
+      print(f"Lendo Bronze: gs://{bucket_name}/{bronze_file}")
+      bucket.blob(bronze_file).download_to_filename(local_bronze)
+
+      df = pd.read_parquet(local_bronze)
+
+      df = df[
+          [
+              "tpep_pickup_datetime",
+              "tpep_dropoff_datetime",
+              "passenger_count",
+              "trip_distance",
+              "fare_amount",
+              "total_amount"
+          ]
+      ].copy()
+
+      df = df.dropna()
+      df = df[df["passenger_count"] > 0]
+      df = df[df["trip_distance"] > 0]
+      df = df[df["fare_amount"] >= 0]
+      df["pickup_date"] = pd.to_datetime(df["tpep_pickup_datetime"]).dt.date
+
+      start_date = pd.Timestamp(f"{year}-{month}-01")
+      end_date = start_date + pd.offsets.MonthBegin(1)
+
+      df["pickup_date"] = pd.to_datetime(df["pickup_date"])
+      df = df[
+          (df["pickup_date"] >= start_date) &
+          (df["pickup_date"] < end_date)
+      ]
+
+      df.to_parquet(local_silver, index=False)
+
+      destination = f"silver/trips/silver_tripdata_{year}-{month}.parquet"
+      bucket.blob(destination).upload_from_filename(local_silver)
+
+      print(f"Silver salvo em gs://{bucket_name}/{destination}")
+
+  - id: gold_to_gcs
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas pyarrow google-cloud-storage
+    script: |
+      import pandas as pd
+      from pathlib import Path
+      from google.cloud import storage
+      from google.oauth2.credentials import Credentials
+
+      year = "{{ inputs.year }}"
+      month = "{{ inputs.month }}"
+      bucket_name = "terraform-demo-bucket-ricardo-001"
+      credentials_path = "/root/.config/gcloud/application_default_credentials.json"
+
+      credentials = Credentials.from_authorized_user_file(
+          credentials_path,
+          scopes=["https://www.googleapis.com/auth/cloud-platform"]
+      )
+
+      client = storage.Client(
+          project="terraform-lab-ricardo",
+          credentials=credentials
+      )
+
+      bucket = client.bucket(bucket_name)
+
+      silver_file = f"silver/trips/silver_tripdata_{year}-{month}.parquet"
+      local_silver = Path("silver.parquet")
+      local_gold = Path(f"daily_trip_metrics_{year}-{month}.parquet")
+
+      print(f"Lendo Silver: gs://{bucket_name}/{silver_file}")
+      bucket.blob(silver_file).download_to_filename(local_silver)
+
+      df = pd.read_parquet(local_silver)
+
+      gold = (
+          df.groupby("pickup_date")
+          .agg(
+              total_trips=("pickup_date", "count"),
+              total_passengers=("passenger_count", "sum"),
+              avg_trip_distance=("trip_distance", "mean"),
+              avg_fare_amount=("fare_amount", "mean"),
+              total_revenue=("total_amount", "sum")
+          )
+          .reset_index()
+      )
+
+      import pyarrow as pa
+      import pyarrow.parquet as pq
+
+      gold["pickup_date"] = pd.to_datetime(gold["pickup_date"]).dt.date
+
+      schema = pa.schema([
+          ("pickup_date", pa.date32()),
+          ("total_trips", pa.int64()),
+          ("total_passengers", pa.float64()),
+          ("avg_trip_distance", pa.float64()),
+          ("avg_fare_amount", pa.float64()),
+          ("total_revenue", pa.float64()),
+      ])
+
+      table = pa.Table.from_pandas(gold, schema=schema, preserve_index=False)
+      pq.write_table(table, local_gold)
+
+      destination = f"gold/daily_trip_metrics_{year}-{month}.parquet"
+      bucket.blob(destination).upload_from_filename(local_gold)
+
+      print(f"Gold salvo em gs://{bucket_name}/{destination}")
+
+  - id: load_gold_to_bigquery
+    type: io.kestra.plugin.gcp.bigquery.LoadFromGcs
+    from:
+      - gs://terraform-demo-bucket-ricardo-001/gold/daily_trip_metrics_{{ inputs.year }}-{{ inputs.month }}.parquet
+    destinationTable: terraform-lab-ricardo.ny_taxi.daily_trip_metrics_auto
+    format: PARQUET
+    writeDisposition: WRITE_TRUNCATE
+  
+  - id: dbt_run
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - cd /taxi_project && dbt run --profiles-dir /root/.dbt
+
+  - id: dbt_test
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - cd /taxi_project && dbt test --profiles-dir /root/.dbt
+
+  - id: ml_forecast_7_days
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas scikit-learn google-cloud-bigquery pandas-gbq
+    script: |
+      import pandas as pd
+      from google.cloud import bigquery
+      from sklearn.ensemble import RandomForestRegressor
+
+      client = bigquery.Client(project="terraform-lab-ricardo")
+
+      query = """
+      SELECT *
+      FROM `terraform-lab-ricardo.ny_taxi.features_daily_trip_metrics`
+      ORDER BY pickup_date
+      """
+
+      df = client.query(query).to_dataframe()
+      df["pickup_date"] = pd.to_datetime(df["pickup_date"])
+
+      feature_cols = [
+          col for col in df.columns
+          if col not in ["pickup_date", "total_revenue"]
+      ]
+
+      X = df[feature_cols]
+      y = df["total_revenue"]
+
+      model = RandomForestRegressor(
+          n_estimators=100,
+          random_state=42
+      )
+      model.fit(X, y)
+
+      last_row = df.iloc[-1].copy()
+      future_rows = []
+
+      for i in range(7):
+          next_row = last_row.copy()
+          next_row["pickup_date"] = last_row["pickup_date"] + pd.Timedelta(days=1)
+
+          # ===== atualizar features temporais =====
+          next_row["day_of_week"] = next_row["pickup_date"].dayofweek + 1
+          next_row["is_weekend"] = 1 if next_row["day_of_week"] in [6, 7] else 0
+          next_row["month"] = next_row["pickup_date"].month
+          next_row["day"] = next_row["pickup_date"].day
+
+          X_next = pd.DataFrame([next_row[feature_cols]])
+
+          pred = model.predict(X_next)[0]
+
+          output_row = next_row.copy()
+          output_row["predicted_total_revenue"] = float(pred)
+          future_rows.append(output_row)
+
+          last_row = next_row.copy()
+
+      future_df = pd.DataFrame(future_rows)
+
+      future_df = future_df[
+          ["pickup_date", "predicted_total_revenue"] + feature_cols
+      ]
+
+      future_df.to_gbq(
+          "ny_taxi.predictions_7days",
+          project_id="terraform-lab-ricardo",
+          if_exists="replace"
+      )
+
+      print("Forecast de 7 dias salvo no BigQuery")
+
+triggers:
+  - id: daily_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 7 * * *"

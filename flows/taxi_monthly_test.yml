@@ -1,0 +1,16 @@
+id: taxi_monthly_test
+namespace: zoomcamp.pipeline
+
+inputs:
+  - id: year
+    type: STRING
+    defaults: "2021"
+
+  - id: month
+    type: STRING
+    defaults: "02"
+
+tasks:
+  - id: echo_inputs
+    type: io.kestra.plugin.core.log.Log
+    message: "Teste year={{ inputs.year }}, month={{ inputs.month }}"

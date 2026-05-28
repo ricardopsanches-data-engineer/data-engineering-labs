@@ -1,0 +1,102 @@
+id: taxi_monthly_ingestion
+namespace: zoomcamp.pipeline
+
+inputs:
+  - id: year
+    type: STRING
+    defaults: "2021"
+
+  - id: month
+    type: STRING
+    defaults: "02"
+
+variables:
+  bucket_name: terraform-demo-bucket-ricardo-001
+  project_id: terraform-lab-ricardo
+  dataset: ny_taxi
+
+tasks:
+  - id: log_inputs
+    type: io.kestra.plugin.core.log.Log
+    message: "Iniciando ingestão para year={{ inputs.year }}, month={{ inputs.month }}"
+
+  - id: download_to_bronze
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /scripts/download_to_bronze.py --year {{ inputs.year }} --month {{ inputs.month }}
+
+  - id: transform_to_silver
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /scripts/transform_to_silver.py --year {{ inputs.year }} --month {{ inputs.month }}
+
+  - id: transform_to_gold
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - python /scripts/transform_to_gold.py --year {{ inputs.year }} --month {{ inputs.month }}
+
+  - id: upload_bronze_to_gcs
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - gcloud storage cp /data/bronze/trips/yellow_tripdata_{{ inputs.year }}-{{ inputs.month }}.parquet gs://{{ vars.bucket_name }}/bronze/trips/yellow_tripdata_{{ inputs.year }}-{{ inputs.month }}.parquet
+
+  - id: upload_silver_to_gcs
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - gcloud storage cp /data/silver/trips/yellow_tripdata_{{ inputs.year }}-{{ inputs.month }}.parquet gs://{{ vars.bucket_name }}/silver/trips/yellow_tripdata_{{ inputs.year }}-{{ inputs.month }}.parquet
+
+  - id: upload_gold_to_gcs
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - gcloud storage cp /data/gold/daily_trip_metrics_{{ inputs.year }}-{{ inputs.month }}.parquet gs://{{ vars.bucket_name }}/gold/daily_trip_metrics/daily_trip_metrics_{{ inputs.year }}-{{ inputs.month }}.parquet
+
+  - id: load_gold_to_bigquery_staging
+    type: io.kestra.plugin.gcp.bigquery.LoadFromGcs
+    from:
+      - gs://{{ vars.bucket_name }}/gold/daily_trip_metrics/daily_trip_metrics_{{ inputs.year }}-{{ inputs.month }}.parquet
+    destinationTable: "{{ vars.project_id }}.{{ vars.dataset }}.daily_trip_metrics_staging"
+    format: PARQUET
+    writeDisposition: WRITE_TRUNCATE
+
+  - id: merge_into_final_table
+    type: io.kestra.plugin.gcp.bigquery.Query
+    sql: |
+      MERGE `{{ vars.project_id }}.{{ vars.dataset }}.fct_daily_trip_kpis` AS target
+      USING `{{ vars.project_id }}.{{ vars.dataset }}.daily_trip_metrics_staging` AS source
+      ON target.pickup_date = source.pickup_date
+      WHEN MATCHED THEN
+        UPDATE SET
+          total_trips = source.total_trips,
+          total_passengers = source.total_passengers,
+          avg_trip_distance = source.avg_trip_distance,
+          avg_fare_amount = source.avg_fare_amount,
+          total_revenue = source.total_revenue
+      WHEN NOT MATCHED THEN
+        INSERT (
+          pickup_date,
+          total_trips,
+          total_passengers,
+          avg_trip_distance,
+          avg_fare_amount,
+          total_revenue
+        )
+        VALUES (
+          source.pickup_date,
+          source.total_trips,
+          source.total_passengers,
+          source.avg_trip_distance,
+          source.avg_fare_amount,
+          source.total_revenue
+        );

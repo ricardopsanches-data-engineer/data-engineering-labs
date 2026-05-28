@@ -15,9 +15,7 @@ clean-targets:
 
 models:
   taxi_project:
-
     staging:
       +materialized: view
-
     marts:
       +materialized: table

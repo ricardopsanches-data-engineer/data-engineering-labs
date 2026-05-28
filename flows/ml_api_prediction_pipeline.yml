@@ -1,0 +1,32 @@
+id: ml_api_prediction_pipeline
+namespace: taxi.ml
+
+description: Chama API FastAPI, salva previsão no BigQuery, registra logs e monitora drift.
+
+triggers:
+  - id: daily_prediction_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 7 * * *"
+
+tasks:
+  - id: call_prediction_api_and_save_bigquery
+    type: io.kestra.plugin.scripts.shell.Commands
+    runner: PROCESS
+    commands:
+      - cd /scripts
+      - python call_prediction_api.py
+
+  - id: monitor_prediction_drift
+    type: io.kestra.plugin.scripts.shell.Commands
+    runner: PROCESS
+    commands:
+      - cd /scripts
+      - python monitor_prediction_drift.py
+
+errors:
+  - id: alert_failure
+    type: io.kestra.plugin.scripts.shell.Commands
+    runner: PROCESS
+    commands:
+      - echo "ALERTA: Falha no pipeline ml_api_prediction_pipeline"
+      - echo "Verifique os logs no Kestra e as tabelas ny_taxi.prediction_api_logs / ny_taxi.prediction_drift_monitoring"

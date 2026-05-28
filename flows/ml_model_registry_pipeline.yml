@@ -1,0 +1,95 @@
+id: ml_model_registry_pipeline
+namespace: taxi.ml
+
+description: Treina modelo, versiona artefato, envia para GCS, valida latest.json e aplica quality gate
+
+tasks:
+  - id: dbt_run_features
+    type: io.kestra.plugin.scripts.shell.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    commands:
+      - cd /taxi_project
+      - dbt run --select features_daily_trip_metrics
+
+  - id: train_model
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install google-cloud-bigquery google-cloud-storage pandas scikit-learn joblib db-dtypes
+    script: |
+      import subprocess
+
+      result = subprocess.run(
+          ["python", "/scripts/train_model_v3.py"],
+          capture_output=True,
+          text=True
+      )
+
+      print(result.stdout)
+
+      if result.returncode != 0:
+          print(result.stderr)
+          raise Exception("Erro ao treinar modelo")
+
+  - id: upload_model_to_gcs
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install google-cloud-storage
+    script: |
+      import subprocess
+
+      result = subprocess.run(
+          ["python", "/scripts/upload_latest_model_to_gcs.py"],
+          capture_output=True,
+          text=True
+      )
+
+      print(result.stdout)
+
+      if result.returncode != 0:
+          print(result.stderr)
+          raise Exception("Erro ao subir modelo para GCS")
+
+  - id: validate_latest_json
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    script: |
+      import subprocess
+
+      result = subprocess.run(
+          ["python", "/scripts/validate_latest_json.py"],
+          capture_output=True,
+          text=True
+      )
+
+      print(result.stdout)
+
+      if result.returncode != 0:
+          print(result.stderr)
+          raise Exception("latest.json inválido")
+
+  - id: compare_with_production
+    type: io.kestra.plugin.scripts.python.Script
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install google-cloud-bigquery pandas db-dtypes
+    script: |
+      import subprocess
+
+      result = subprocess.run(
+          ["python", "/scripts/compare_with_production.py"],
+          capture_output=True,
+          text=True
+      )
+
+      print(result.stdout)
+
+      if result.returncode != 0:
+          print(result.stderr)
+          raise Exception("Quality gate falhou: modelo rejeitado")

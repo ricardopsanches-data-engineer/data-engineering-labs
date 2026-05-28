@@ -2,40 +2,63 @@ version: 2
 
 models:
   - name: fct_daily_trip_metrics
-    description: "Tabela fato com métricas diárias consolidadas para análise"
-
+    description: "Tabela fato incremental com métricas diárias consolidadas de viagens."
     columns:
       - name: pickup_date
-        description: "Chave única por dia"
+        description: "Data de referência das métricas diárias."
         tests:
           - not_null
           - unique
 
       - name: total_trips
-        description: "Quantidade total de corridas no dia"
+        description: "Quantidade total de viagens no dia."
         tests:
           - not_null
 
       - name: total_passengers
-        description: "Quantidade total de passageiros no dia"
-        tests:
-          - not_null
+        description: "Quantidade total de passageiros no dia."
 
-  - name: fct_daily_trip_kpis
-    description: "Tabela analítica com KPIs diários derivados das métricas de corridas"
+      - name: avg_trip_distance
+        description: "Distância média das viagens no dia."
 
+      - name: avg_fare_amount
+        description: "Valor médio da tarifa das viagens no dia."
+
+      - name: total_revenue
+        description: "Receita total gerada no dia."
+
+  - name: features_daily_trip_metrics
+    description: "Camada de features derivadas da tabela fato para análises preditivas e modelos de machine learning."
     columns:
       - name: pickup_date
-        description: "Data de referência dos KPIs"
+        description: "Data de referência das features."
         tests:
           - not_null
           - unique
 
-      - name: revenue_per_trip
-        description: "Receita média por corrida"
+      - name: day_of_week
+        description: "Dia da semana extraído da data."
 
-      - name: passengers_per_trip
-        description: "Média de passageiros por corrida"
+      - name: is_weekend
+        description: "Indicador se a data corresponde a fim de semana."
 
-      - name: revenue_per_passenger
-        description: "Receita média por passageiro"
+      - name: month
+        description: "Mês extraído da data."
+
+      - name: day
+        description: "Dia do mês extraído da data."
+
+      - name: total_trips
+        description: "Quantidade total de viagens no dia."
+
+      - name: total_passengers
+        description: "Quantidade total de passageiros no dia."
+
+      - name: avg_trip_distance
+        description: "Distância média das viagens no dia."
+
+      - name: avg_fare_amount
+        description: "Valor médio da tarifa das viagens no dia."
+
+      - name: total_revenue
+        description: "Receita total gerada no dia."
