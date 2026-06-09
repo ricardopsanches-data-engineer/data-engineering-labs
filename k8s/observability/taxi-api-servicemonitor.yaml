@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: taxi-api-servicemonitor
+  namespace: observability
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - taxi-app
+  selector:
+    matchLabels:
+      app: taxi-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 5s

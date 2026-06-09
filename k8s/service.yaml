@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: taxi-api-service
+  namespace: taxi-app
+  labels:
+    app: taxi-api
+spec:
+  type: ClusterIP
+  selector:
+    app: taxi-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8080

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feature-service
+  namespace: taxi-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: feature-service
+  template:
+    metadata:
+      labels:
+        app: feature-service
+    spec:
+      containers:
+        - name: feature-service
+          image: feature-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8090
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "feature-service"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feature-service
+  namespace: taxi-app
+spec:
+  selector:
+    app: feature-service
+  ports:
+    - name: http
+      port: 8090
+      targetPort: 8090

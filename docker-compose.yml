@@ -10,7 +10,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      JAVA_OPTS: "-Xms512m -Xmx2g"
+      JAVA_OPTS: "-Xms512m -Xmx3g"
       KESTRA_CONFIGURATION: |
         kestra:
           repository:
@@ -34,9 +34,12 @@ services:
       - ./scripts:/scripts
       - ./data:/data
       - ./flows:/flows
+      - ./taxi_project:/taxi_project
       - /var/run/docker.sock:/var/run/docker.sock
       - kestra-tmp:/tmp/kestra
       - C:/Users/sanch/AppData/Roaming/gcloud:/root/.config/gcloud
+      - C:/Users/sanch/.dbt:/root/.dbt
+      - ./models:/models
 
 volumes:
   kestra-data:

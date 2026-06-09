@@ -149,3 +149,23 @@ __marimo__/
 # =========================
 temp*
 scripts/temp*
+
+# =========================
+# MLflow / Model artifacts
+# =========================
+mlruns/
+mlflow.db
+**/mlflow.db
+model_artifact/
+**/model_artifact/
+models/
+**/models/
+*.pkl
+*.joblib
+
+# =========================
+# Airflow
+# =========================
+airflow_lab/logs/
+airflow_lab/.env
+airflow_lab/config/airflow.cfg

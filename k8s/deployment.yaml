@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taxi-api-deployment
+  namespace: taxi-app
+  labels:
+    app: taxi-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taxi-api
+  template:
+    metadata:
+      labels:
+        app: taxi-api
+    spec:
+      containers:
+        - name: taxi-api
+          image: fastapi_service-taxi-fastapi:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

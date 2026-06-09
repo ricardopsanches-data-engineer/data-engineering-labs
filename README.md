@@ -1,91 +1,103 @@
-# NYC Taxi Data Pipeline | End-to-End Data Engineering Project
+# NYC Taxi Data Platform | Data Engineering, MLOps & Observability
 
 ## Overview
 
-This project demonstrates a complete end-to-end data engineering pipeline using NYC Taxi data. It covers ingestion, transformation, orchestration, and visualization using a modern data stack.
+This project evolved from a traditional NYC Taxi Data Pipeline into a complete Data Engineering, MLOps, and Observability Platform.
 
-The goal is to simulate a real-world analytics workflow used by data teams in production environments.
+The platform covers the full lifecycle of modern data and machine learning systems, including:
 
----
+* Data ingestion and transformation
+* Cloud data lake and data warehouse integration
+* Workflow orchestration
+* Machine learning model serving
+* Kubernetes deployment
+* Model monitoring and drift detection
+* Distributed tracing and observability
+
+The objective is to simulate a production-grade platform used by modern data engineering and MLOps teams.
+
+## Platform Components
+
+### Data Engineering
+
+* Kestra
+* Google Cloud Storage
+* BigQuery
+* dbt
+* Looker Studio
+
+### MLOps
+
+* FastAPI
+* MLflow
+* Feature Service
+* Model Versioning
+* Drift Detection
+
+### Observability
+
+* Prometheus
+* Grafana
+* Loki
+* Tempo
+* OpenTelemetry
+
+### Infrastructure
+
+* Docker
+* Kubernetes
+
+## Dashboards
+
+### Taxi Platform - Operations & MLOps
+
+Monitoring of:
+
+* API Health
+* Request Rate
+* Latency
+* Prediction Volume
+* Prediction Errors
+* Drift Percentage
+* Kubernetes Resources
+
+### Taxi Platform - End-to-End Observability
+
+Monitoring of:
+
+* Traces per Minute
+* Logs per Minute
+* Trace Errors
+* Correlated Logs
+* Distributed Tracing
 
 ## Architecture
 
-This project follows the **Medallion Architecture**:
+Data Pipeline
 
-* **Bronze Layer** → Raw data ingestion (CSV files)
-* **Silver Layer** → Cleaned and structured data (Parquet)
-* **Gold Layer** → Aggregated business metrics for analytics
+CSV → GCS → BigQuery → dbt → Looker Studio
 
----
+MLOps Pipeline
 
-## Tech Stack
+Feature Service → FastAPI → MLflow Model
 
-* **Python** → Data ingestion & processing
-* **Docker** → Containerized environment
-* **Kestra** → Workflow orchestration
-* **Google Cloud Storage (GCS)** → Data lake
-* **BigQuery** → Data warehouse
-* **dbt** → Data transformation & modeling
-* **Looker Studio** → Data visualization
+Observability Pipeline
 
----
+Prometheus → Grafana
 
-## Pipeline Flow
+Loki → Grafana
 
-1. Extract NYC Taxi data from public dataset
-2. Load raw data into GCS (Bronze)
-3. Transform data into Parquet format (Silver)
-4. Aggregate KPIs (Gold layer)
-5. Load curated data into BigQuery
-6. Build analytical models using dbt
-7. Create an interactive dashboard in Looker Studio
+Tempo → Grafana
 
----
+OpenTelemetry → Tempo
 
-## Key Metrics
+## Key Achievements
 
-* Total Revenue
-* Total Trips
-* Total Passengers
-* Revenue per Trip
-* Revenue per Passenger
-* Daily Revenue Change
-* 7-day Rolling Average
-* Weekly Revenue Growth
-
----
-
-## Dashboard
-
-![Dashboard](dashboard/looker_dashboard.png)
-
-The dashboard includes:
-
-* Revenue trend with moving average
-* KPI scorecards
-* Interactive date filtering
-* Business performance insights
-
----
-
-## Insights
-
-* Clear weekly seasonality patterns
-* Revenue fluctuations across different days
-* Trend smoothing using rolling averages
-* Identification of potential anomalies
-
----
-
-## Future Improvements
-
-* Implement incremental models in dbt
-* Add more data quality tests
-* Optimize BigQuery cost and performance
-* Introduce advanced anomaly detection
-
----
-
-## Author
-
-Ricardo Sanches
+* End-to-end Data Engineering Pipeline
+* Production-style ML Inference API
+* Kubernetes Deployment
+* Distributed Tracing
+* Log-Trace Correlation
+* Model Drift Monitoring
+* Centralized Observability Stack
+* Automated Alerting

@@ -1,69 +1,96 @@
-from pathlib import Path
+import os
 import time
+from pathlib import Path
 import requests
-import yaml
+from requests.auth import HTTPBasicAuth
 
-KESTRA_URL = "http://localhost:8080"
-USERNAME = "admin@kestra.io"
-PASSWORD = "Admin1234"
-FLOWS_DIR = Path("C:/Users/sanch/data-engineering-lab/flows")
-# se for rodar dentro do container, troque para:
-# FLOWS_DIR = Path("/flows")
+KESTRA_URL = "http://localhost:8080/api/v1/main/flows"
+USERNAME = os.getenv("KESTRA_USERNAME", "")
+PASSWORD = os.getenv("KESTRA_PASSWORD", "")
 
-session = requests.Session()
-session.auth = (USERNAME, PASSWORD)
-session.headers.update({"Content-Type": "application/x-yaml"})
+FLOWS_DIR = Path(r"C:\Users\sanch\data-engineering-lab\flows")
+
+auth = HTTPBasicAuth(USERNAME, PASSWORD) if USERNAME or PASSWORD else None
+headers = {"Content-Type": "application/x-yaml"}
 
 
-def upsert_flow(content: str, namespace: str, flow_id: str) -> str:
-    update_url = f"{KESTRA_URL}/api/v1/main/flows/{namespace}/{flow_id}"
-    create_url = f"{KESTRA_URL}/api/v1/main/flows"
+def upsert_flow(flow_file: Path):
+    namespace = None
+    flow_id = None
+
+    content = flow_file.read_text(encoding="utf-8")
+
+    for line in content.splitlines():
+        if line.startswith("namespace:"):
+            namespace = line.split(":", 1)[1].strip()
+        elif line.startswith("id:"):
+            flow_id = line.split(":", 1)[1].strip()
+
+        if namespace and flow_id:
+            break
+
+    if not namespace or not flow_id:
+        print(f"IGNORADO: não foi possível identificar id/namespace em {flow_file.name}")
+        return
+
+    url = f"{KESTRA_URL}/{namespace}/{flow_id}"
+
+    print(f"Sincronizando: {namespace}.{flow_id}")
+
+    last_error = None
 
     for attempt in range(1, 4):
         try:
-            response = session.put(update_url, data=content.encode("utf-8"), timeout=60)
+            response = requests.put(
+                url,
+                headers=headers,
+                data=content.encode("utf-8"),
+                auth=auth,
+                timeout=180
+            )
 
-            if response.status_code in (200, 204):
-                return "UPDATED"
+            if response.status_code in (200, 201):
+                print(f"UPDATED: {flow_file.name}")
+                return
 
             if response.status_code == 404:
-                response = session.post(create_url, data=content.encode("utf-8"), timeout=60)
-                if response.ok:
-                    return "CREATED"
-                return f"ERRO CREATE {response.status_code}: {response.text}"
+                create_url = KESTRA_URL
+                create_response = requests.post(
+                    create_url,
+                    headers=headers,
+                    data=content.encode("utf-8"),
+                    auth=auth,
+                    timeout=180
+                )
 
-            return f"ERRO UPDATE {response.status_code}: {response.text}"
+                if create_response.status_code in (200, 201):
+                    print(f"CREATED: {flow_file.name}")
+                    return
+                else:
+                    print(f"ERRO CREATE {create_response.status_code}: {create_response.text}: {flow_file.name}")
+                    return
+
+            print(f"ERRO UPDATE {response.status_code}: {response.text}: {flow_file.name}")
+            return
 
         except requests.exceptions.RequestException as e:
-            print(f"tentativa {attempt}/3 falhou: {e}")
-            if attempt < 3:
-                time.sleep(3)
-            else:
-                return f"ERRO CONEXAO: {e}"
+            last_error = e
+            print(f"Tentativa {attempt}/3 falhou em {flow_file.name}: {e}")
+            time.sleep(5 * attempt)
 
-
-def main():
-    yaml_files = sorted(FLOWS_DIR.glob("*.yaml"))
-
-    if not yaml_files:
-        print(f"Nenhum flow encontrado em {FLOWS_DIR}")
-        return
-
-    for file in yaml_files:
-        try:
-            content = file.read_text(encoding="utf-8")
-            flow = yaml.safe_load(content)
-
-            flow_id = flow["id"]
-            namespace = flow["namespace"]
-
-            print(f"Sincronizando: {namespace}.{flow_id}")
-            result = upsert_flow(content, namespace, flow_id)
-            print(f"{result}: {file.name}")
-
-        except Exception as e:
-            print(f"ERRO LOCAL: {file.name} -> {e}")
+    print(f"FALHA FINAL: {flow_file.name} -> {last_error}")
 
 
 if __name__ == "__main__":
-    main()
+    allowed_files = {
+        "ml_pipeline.yml",
+        "ml_model_registry_pipeline.yml",
+        "ml_api_prediction_pipeline.yml",
+    }
+
+    for flow_file in FLOWS_DIR.glob("*.yml"):
+        if flow_file.name not in allowed_files:
+            print(f"IGNORADO: {flow_file.name}")
+            continue
+
+        upsert_flow(flow_file)
