@@ -10,6 +10,21 @@ The objective is to simulate a production-grade architecture commonly used by Da
 
 ---
 
+## Project Highlights
+
+* End-to-End Data Engineering Pipeline
+* Production-Style ML Inference API
+* Kubernetes Deployment
+* Distributed Tracing with OpenTelemetry
+* Log-Trace Correlation
+* Model Drift Detection
+* Centralized Observability Stack
+* Automated Alerting
+* Multi-Service Architecture
+* Cloud-Native Deployment
+
+---
+
 ## Platform Components
 
 ### Data Engineering
@@ -48,53 +63,43 @@ The objective is to simulate a production-grade architecture commonly used by Da
 
 ### Data Pipeline
 
+```text
 CSV Files
-
-↓
-
+   ↓
 Google Cloud Storage (Bronze)
-
-↓
-
+   ↓
 BigQuery (Silver)
-
-↓
-
+   ↓
 dbt Models (Gold)
-
-↓
-
+   ↓
 Looker Studio
+```
 
 ### MLOps Pipeline
 
+```text
 Client Request
-
-↓
-
+   ↓
 FastAPI Prediction API
-
-↓
-
+   ↓
 Feature Service
-
-↓
-
+   ↓
 MLflow Model
-
-↓
-
+   ↓
 Prediction Response
+```
 
 ### Observability Pipeline
 
-Metrics → Prometheus → Grafana
+```text
+Metrics  → Prometheus → Grafana
 
-Logs → Loki → Grafana
+Logs     → Loki       → Grafana
 
-Traces → Tempo → Grafana
+Traces   → Tempo      → Grafana
 
 OpenTelemetry → Tempo
+```
 
 ---
 
@@ -106,12 +111,12 @@ OpenTelemetry → Tempo
 
 Provides business insights such as:
 
-* Revenue trends
-* Total trips
-* Passenger metrics
-* Revenue per passenger
-* Rolling averages
-* KPI scorecards
+* Revenue Trends
+* Total Trips
+* Passenger Metrics
+* Revenue per Passenger
+* Rolling Averages
+* KPI Scorecards
 
 ---
 
@@ -159,8 +164,8 @@ Grafana dashboard definitions are available in:
 
 ## Key Achievements
 
-* End-to-end Data Engineering Pipeline
-* Production-style ML Inference API
+* End-to-End Data Engineering Pipeline
+* Production-Style ML Inference API
 * Kubernetes Deployment
 * Distributed Tracing with OpenTelemetry
 * Log-Trace Correlation
@@ -175,6 +180,17 @@ Grafana dashboard definitions are available in:
 ## Key Technologies
 
 Python • FastAPI • MLflow • Docker • Kubernetes • Prometheus • Grafana • Loki • Tempo • OpenTelemetry • Kestra • BigQuery • dbt • Looker Studio
+
+---
+
+## Future Improvements
+
+* CI/CD Automation
+* Infrastructure as Code (Terraform)
+* Feature Store Integration
+* Data Quality Monitoring
+* SLO / SLI Dashboards
+* Cloud-Native Deployment Automation
 
 ---
 
