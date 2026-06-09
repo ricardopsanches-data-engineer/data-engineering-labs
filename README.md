@@ -4,24 +4,18 @@
 
 This project evolved from a traditional NYC Taxi Data Pipeline into a complete Data Engineering, MLOps, and Observability Platform.
 
-The platform covers the full lifecycle of modern data and machine learning systems, including:
+The platform demonstrates the full lifecycle of a modern data and machine learning ecosystem, including data ingestion, transformation, orchestration, model serving, monitoring, distributed tracing, and cloud-native deployment.
 
-* Data ingestion and transformation
-* Cloud data lake and data warehouse integration
-* Workflow orchestration
-* Machine learning model serving
-* Kubernetes deployment
-* Model monitoring and drift detection
-* Distributed tracing and observability
+The objective is to simulate a production-grade architecture commonly used by Data Engineers, MLOps Engineers, Platform Engineers, and Site Reliability Engineering (SRE) teams.
 
-The objective is to simulate a production-grade platform used by modern data engineering and MLOps teams.
+---
 
 ## Platform Components
 
 ### Data Engineering
 
 * Kestra
-* Google Cloud Storage
+* Google Cloud Storage (GCS)
 * BigQuery
 * dbt
 * Looker Studio
@@ -32,6 +26,7 @@ The objective is to simulate a production-grade platform used by modern data eng
 * MLflow
 * Feature Service
 * Model Versioning
+* Prediction Monitoring
 * Drift Detection
 
 ### Observability
@@ -47,57 +42,142 @@ The objective is to simulate a production-grade platform used by modern data eng
 * Docker
 * Kubernetes
 
+---
+
+## Architecture
+
+### Data Pipeline
+
+CSV Files
+
+↓
+
+Google Cloud Storage (Bronze)
+
+↓
+
+BigQuery (Silver)
+
+↓
+
+dbt Models (Gold)
+
+↓
+
+Looker Studio
+
+### MLOps Pipeline
+
+Client Request
+
+↓
+
+FastAPI Prediction API
+
+↓
+
+Feature Service
+
+↓
+
+MLflow Model
+
+↓
+
+Prediction Response
+
+### Observability Pipeline
+
+Metrics → Prometheus → Grafana
+
+Logs → Loki → Grafana
+
+Traces → Tempo → Grafana
+
+OpenTelemetry → Tempo
+
+---
+
 ## Dashboards
+
+### Business Analytics Dashboard (Looker Studio)
+
+![Looker Dashboard](dashboard/looker_dashboard.png)
+
+Provides business insights such as:
+
+* Revenue trends
+* Total trips
+* Passenger metrics
+* Revenue per passenger
+* Rolling averages
+* KPI scorecards
+
+---
 
 ### Taxi Platform - Operations & MLOps
 
-Monitoring of:
+![Operations & MLOps](dashboard/operations_mlops_dashboard.png)
+
+Monitors:
 
 * API Health
 * Request Rate
-* Latency
+* API Latency
 * Prediction Volume
 * Prediction Errors
 * Drift Percentage
 * Kubernetes Resources
+* CPU Usage
+* Memory Usage
+
+---
 
 ### Taxi Platform - End-to-End Observability
 
-Monitoring of:
+![End-to-End Observability](dashboard/end_to_end_observability_dashboard.png)
+
+Monitors:
 
 * Traces per Minute
 * Logs per Minute
 * Trace Errors
 * Correlated Logs
 * Distributed Tracing
+* Log ↔ Trace Correlation
 
-## Architecture
+---
 
-Data Pipeline
+## Dashboard Exports
 
-CSV → GCS → BigQuery → dbt → Looker Studio
+Grafana dashboard definitions are available in:
 
-MLOps Pipeline
+* `dashboard/operations_mlops_dashboard.json`
+* `dashboard/end_to_end_observability_dashboard.json`
 
-Feature Service → FastAPI → MLflow Model
-
-Observability Pipeline
-
-Prometheus → Grafana
-
-Loki → Grafana
-
-Tempo → Grafana
-
-OpenTelemetry → Tempo
+---
 
 ## Key Achievements
 
 * End-to-end Data Engineering Pipeline
 * Production-style ML Inference API
 * Kubernetes Deployment
-* Distributed Tracing
+* Distributed Tracing with OpenTelemetry
 * Log-Trace Correlation
 * Model Drift Monitoring
 * Centralized Observability Stack
 * Automated Alerting
+* Multi-Service Architecture
+* Cloud-Native Deployment
+
+---
+
+## Key Technologies
+
+Python • FastAPI • MLflow • Docker • Kubernetes • Prometheus • Grafana • Loki • Tempo • OpenTelemetry • Kestra • BigQuery • dbt • Looker Studio
+
+---
+
+## Author
+
+Ricardo Sanches
