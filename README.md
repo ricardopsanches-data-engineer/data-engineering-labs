@@ -25,6 +25,44 @@ The objective is to simulate a production-grade architecture commonly used by Da
 
 ---
 
+## Architecture
+
+```mermaid
+flowchart TD
+    Client[Client / User] --> API[FastAPI Prediction API]
+
+    API --> FeatureService[Feature Service]
+    API --> MLflow[MLflow Model Artifact]
+
+    FeatureService --> API
+    MLflow --> API
+
+    API --> Prediction[Prediction Response]
+
+    API --> Prometheus[Prometheus Metrics]
+    API --> Loki[Loki Logs]
+    API --> Tempo[Tempo Traces]
+
+    FeatureService --> Prometheus
+    FeatureService --> Tempo
+
+    Prometheus --> Grafana[Grafana Dashboards]
+    Loki --> Grafana
+    Tempo --> Grafana
+
+    Grafana --> Alerts[Alerts & Monitoring]
+
+    classDef app fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef observability fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
+    classDef dashboard fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    class Client,API,FeatureService,MLflow,Prediction app;
+    class Prometheus,Loki,Tempo observability;
+    class Grafana,Alerts dashboard;
+```
+
+---
+
 ## Platform Components
 
 ### Data Engineering
@@ -56,10 +94,12 @@ The objective is to simulate a production-grade architecture commonly used by Da
 
 * Docker
 * Kubernetes
+* Google Cloud Run
+* GitHub Actions
 
 ---
 
-## Architecture
+## Platform Workflows
 
 ### Data Pipeline
 
@@ -120,7 +160,7 @@ Provides business insights such as:
 
 ---
 
-### Taxi Platform - Operations & MLOps
+### Taxi Platform – Operations & MLOps
 
 ![Operations & MLOps](dashboard/operations_mlops_dashboard.png)
 
@@ -138,7 +178,7 @@ Monitors:
 
 ---
 
-### Taxi Platform - End-to-End Observability
+### Taxi Platform – End-to-End Observability
 
 ![End-to-End Observability](dashboard/end_to_end_observability_dashboard.png)
 
@@ -162,38 +202,51 @@ Grafana dashboard definitions are available in:
 
 ---
 
+## Release
+
+Current stable release:
+
+**v1.0.0 — NYC Taxi Data Platform**
+
+Published on GitHub Releases.
+
+---
+
 ## Key Achievements
 
-* End-to-End Data Engineering Pipeline
-* Production-Style ML Inference API
-* Kubernetes Deployment
-* Distributed Tracing with OpenTelemetry
-* Log-Trace Correlation
-* Model Drift Monitoring
-* Centralized Observability Stack
-* Automated Alerting
-* Multi-Service Architecture
-* Cloud-Native Deployment
+* Designed and deployed an end-to-end machine learning prediction platform using FastAPI and MLflow.
+* Implemented distributed tracing using OpenTelemetry and Grafana Tempo.
+* Built a centralized observability stack with Prometheus, Loki, Grafana, and Tempo.
+* Created production-style dashboards for metrics, logs, traces, and model monitoring.
+* Implemented model drift detection and automated alerting workflows.
+* Deployed cloud-native workloads using Docker, Kubernetes, and Google Cloud Run.
+* Established log-to-trace correlation for faster incident investigation and troubleshooting.
 
 ---
 
 ## Key Technologies
 
-Python • FastAPI • MLflow • Docker • Kubernetes • Prometheus • Grafana • Loki • Tempo • OpenTelemetry • Kestra • BigQuery • dbt • Looker Studio
+Python • FastAPI • MLflow • Docker • Kubernetes • Prometheus • Grafana • Loki • Tempo • OpenTelemetry • Kestra • BigQuery • dbt • Looker Studio • Google Cloud Run • GitHub Actions
 
 ---
 
 ## Future Improvements
 
-* CI/CD Automation
-* Infrastructure as Code (Terraform)
+* Terraform Infrastructure as Code
+* Service Graph Visualization
+* Trace-to-Logs Navigation
 * Feature Store Integration
 * Data Quality Monitoring
 * SLO / SLI Dashboards
-* Cloud-Native Deployment Automation
+* Multi-Environment Deployment Strategy
 
 ---
 
 ## Author
 
 Ricardo Sanches
+
+Data Engineer | MLOps Enthusiast | Cloud & Observability Practitioner
+
+GitHub:
+https://github.com/ricardopsanches-data-engineer
